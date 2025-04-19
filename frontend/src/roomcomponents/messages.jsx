@@ -6,18 +6,18 @@ const Messages = ({ sock, chatroomid, userid }) => {
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
-    const socket = sock.connect();
+   
 
-    socket.emit('joinRoom', { chatroomid, userid });
+    sock?.emit('joinRoom', { chatroomid, userid });
 
-    socket.on('message', (msg) => {
+    sock?.on('message', (msg) => {
       setMessages((prevMessages) => [
         ...prevMessages,
         { type: 'joinleave', message: msg },
       ]);
     });
 
-    socket.on('roommessage', (msg) => {
+    sock?.on('roommessage', (msg) => {
       setMessages((prevMessages) => [
         ...prevMessages,
         { type: 'chat', ...msg },
@@ -25,7 +25,7 @@ const Messages = ({ sock, chatroomid, userid }) => {
     });
 
     return () => {
-      socket.disconnect();
+      sock.disconnect();
     };
   }, [sock, chatroomid, userid]);
 
@@ -55,7 +55,7 @@ const Messages = ({ sock, chatroomid, userid }) => {
             <p className="text-sm text-gray-500 text-center">{msg.message}</p>
           ) : msg.userid && (msg.userid._id === userid || msg.userid === userid) ? (
             <div className="flex justify-end">
-              <div className="bg-blue-300 p-3 rounded-lg max-w-[75%]">
+              <div className="bg-blue-100 p-3 rounded-lg max-w-[75%]">
                 <div className="font-semibold text-sm mb-1">You:</div>
                 {isImageUrl(msg.message) ? (
                   <ChatImage src={msg.message} alt="sent-img" lastMessageRef={lastMessageRef} />

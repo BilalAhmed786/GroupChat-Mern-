@@ -7,9 +7,9 @@ const users = ({ sock }) => {
     const [chatusers, stateChatusers ] = useState([])
     useEffect(() => {
 
-        const socket = sock.connect()
+        // const socket = sock.connect()
 
-        socket.on('roomUsers', ({ room, users }) => {
+        sock?.on('roomUsers', ({ room, users }) => {
 
             stateChatroom(room)
             stateChatusers(users)

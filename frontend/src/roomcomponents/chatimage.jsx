@@ -25,7 +25,7 @@ export const ChatImage = ({ src, alt, lastMessageRef }) => {
         ref={imgRef}
         src={src}
         alt={alt}
-        className="rounded-lg max-w-xs"
+        className="rounded-lg w-[250px]"
       />
     );
   };

@@ -34,7 +34,7 @@ const Input = ({ sock, chatroomid, userid }) => {
 
       if (result.data) {
 
-        sock.emit('chatmessage',
+        sock?.emit('chatmessage',
           {
             chatmessage: result.data.fileUrl,
             chatroomid: result.data.chatroomid,
@@ -58,7 +58,7 @@ const Input = ({ sock, chatroomid, userid }) => {
     if (!chatmessage) return
 
     if (chatmessage.trim()) {
-      sock.emit('chatmessage', { chatmessage, chatroomid, userid });
+      sock?.emit('chatmessage', { chatmessage, chatroomid, userid });
       setChatmessage('');
       chatform.current.value = '';
     }

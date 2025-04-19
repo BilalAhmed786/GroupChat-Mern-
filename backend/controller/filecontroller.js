@@ -1,5 +1,4 @@
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { PutObjectCommand} from '@aws-sdk/client-s3';
 import fs from 'fs'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -11,7 +10,6 @@ export const fileroute = async (req, res) => {
   if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
   const fileStream = fs.createReadStream(file.path);
-  
   const key = `Groupchat/${file.filename}`;
 
   const uploadParams = {
@@ -22,27 +20,22 @@ export const fileroute = async (req, res) => {
   };
 
   try {
-    // Upload the file to S3
+    // Upload to S3 (bucket is private, CloudFront will serve it)
     const putCommand = new PutObjectCommand(uploadParams);
     await s3.send(putCommand);
 
-    // Generate a signed URL (valid for 1 hour)
-    const getCommand = new GetObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
-      Key: key,
-    });
-
-    const signedUrl = await getSignedUrl(s3, getCommand); // 1 hour
-    
+    // ❗ Replace with your actual CloudFront domain
+    const fileUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${key}`;
 
     return res.status(200).json({
       chatroomid,
       userid,
-      fileUrl: signedUrl, // Secure, temporary URL
+      fileUrl, // Now served via CloudFront 🔥
     });
 
   } catch (err) {
     console.error('S3 Upload Error:', err);
     return res.status(500).json({ error: 'S3 Upload Failed' });
   }
-};
+
+}

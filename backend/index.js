@@ -25,8 +25,8 @@ app.use(express.urlencoded({
 app.use(cors());
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173', // Allow only specific origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allow specific methods
+    origin: '*', // Allow only specific origin
+    methods: ['GET', 'POST'], // Allow specific methods
     credentials: true, // Enable credentials (cookies, authorization headers)
   }
 });
@@ -108,7 +108,7 @@ io.on('connection', (socket) => {
 
   // Listen for chatMessage
   socket.on('chatmessage', async (msg) => {
-
+console.log(msg)
     const { chatmessage, chatroomid, userid } = msg
 
     try {
