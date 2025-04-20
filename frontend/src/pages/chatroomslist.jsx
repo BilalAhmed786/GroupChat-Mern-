@@ -1,22 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BsPeople } from 'react-icons/bs';
 import Headers from './headers';
 import Footer from './footer';
+import {SocketContext} from '../contextapi/contextapi'
 
 const ChatroomList = () => {
+  
   const navigate = useNavigate();
   const [chatroomdata, setRoomdata] = useState([]);
   const [userdata, setUserdata] = useState(null);
   const [searchroom, setSearchRoom] = useState('');
   const [roomusers, setRoomUsers] = useState([]);
   const [blockusers, setBlockUsers] = useState([]);
+  const {sock}= useContext(SocketContext)
 
   useEffect(() => {
     axios.get(`/api/admin/createroom?search=${searchroom}`)
       .then((response) => {
         setRoomdata(response.data);
+        // sock?.emit('roomdata',response.data)
       })
       .catch((error) => {
         console.log(error);
@@ -36,6 +40,8 @@ const ChatroomList = () => {
     axios.get('/api/admin/roomuser')
       .then((response) => {
         setRoomUsers(response.data);
+        console.log(response.data)
+        // sock?.emit('roomusers',response.data)
       })
       .catch((error) => {
         console.log(error);
@@ -44,12 +50,56 @@ const ChatroomList = () => {
     axios.get('/api/admin/blockuser')
       .then((result) => {
         setBlockUsers(result.data);
+        sock?.emit('blockusers',result.data)
       })
       .catch((error) => {
         console.log(error);
       });
 
   }, []);
+
+    //socket working
+
+    useEffect(()=>{
+     
+      sock?.connect()
+
+      const handleRoomuser =(data)=>{
+        
+        setRoomUsers((prev) => {
+          const userExists = prev.some((user) => user.user === data.user); // ✅ Use `some` for boolean check
+      
+          if (userExists) {
+            return [...prev]; // Just return previous if user already exists
+          } else {
+            return [...prev, data]; // Add new user if not exists
+          }
+        });
+
+
+      }
+
+
+      const handleLeavechat = (data)=>{
+
+        setRoomUsers((prev)=> prev.filter((user)=>user.user !== data.userid))
+      }
+
+
+        sock?.on('roomusers',handleRoomuser)
+        sock?.on('leavechat',handleLeavechat)
+
+
+
+      return ()=>{
+
+
+          sock?.off('roomusers',handleRoomuser)
+          sock?.off('leavechat',handleLeavechat)
+      }
+
+    },[sock])
+
 
   return (
     <>
@@ -68,7 +118,7 @@ const ChatroomList = () => {
         <div className="bg-white shadow-md rounded-lg p-6">
           <ul>
             {chatroomdata && chatroomdata.map((room) => {
-              const usersInRoom = roomusers && roomusers.filter(user => user.room.name === room.name);
+              const usersInRoom = roomusers && roomusers.filter(user => user.room?.name === room.name);
               const isBlocked = blockusers.some(blockedUser => blockedUser.roomname === room.name && blockedUser.user._id === userdata?._id);
 
               return (

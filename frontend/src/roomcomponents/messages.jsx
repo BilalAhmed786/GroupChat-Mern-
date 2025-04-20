@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {ChatImage} from './chatimage'; // External image component
 
-const Messages = ({ sock, chatroomid, userid }) => {
+const Messages = ({ sock, chatroomid, userid}) => {
+ 
   const lastMessageRef = useRef(null);
   const [messages, setMessages] = useState([]);
-
+// console.log(messages)
   useEffect(() => {
    
-
     sock?.emit('joinRoom', { chatroomid, userid });
 
     sock?.on('message', (msg) => {
@@ -25,7 +25,9 @@ const Messages = ({ sock, chatroomid, userid }) => {
     });
 
     return () => {
-      sock.disconnect();
+      sock?.off('message');
+      sock?.off('roommessage');
+      sock?.disconnect()
     };
   }, [sock, chatroomid, userid]);
 
@@ -47,6 +49,12 @@ const Messages = ({ sock, chatroomid, userid }) => {
     }
   };
 
+  // useEffect(()=>{
+  //   return ()=>{
+  //     sock?.disconnect()
+  //   }
+  // },[])
+
   return (
     <div className="messages-container overflow-auto h-[81vh] p-4 space-y-3">
       {messages.map((msg, index) => (
@@ -67,7 +75,7 @@ const Messages = ({ sock, chatroomid, userid }) => {
           ) : (
             <div className="flex justify-start">
               <div className="bg-gray-200 p-3 rounded-lg max-w-[75%]">
-                <div className="font-semibold text-sm mb-1">{msg.userid?.username || 'User'}:</div>
+                <div className="font-semibold text-sm mb-1">{msg.name || 'User'}:</div>
                 {isImageUrl(msg.message) ? (
                   <ChatImage src={msg.message} alt="received-img" lastMessageRef={lastMessageRef} />
                 ) : (

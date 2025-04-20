@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 dotenv.config();
 import con from './database/db.js';
-import { saveuser, finduser, collectuser, removeuser, getcurrentuser } from './utils/user.js';
+import { saveuser, finduser, collectuser, removeuser, getcurrentuser,getjoinUser } from './utils/user.js';
 import { savemsg, getmsg } from './utils/messages.js';
 import cors from 'cors'
 import session from 'express-session';
@@ -53,24 +53,28 @@ io.on('connection', (socket) => {
 
     try {
 
+       const { chatroomid, userid } = msg
 
-      const { chatroomid, userid } = msg
+       socket.userId = userid;     
 
+       socket.join(chatroomid)
+       socket.join(userid)
 
+    const usersaved = await saveuser(chatroomid, userid)
+      
+    socket.broadcast.emit('roomusers',usersaved)
 
-      const usersaved = await saveuser(chatroomid, userid, socket.id)
+    //  const roomuser = await getjoinUser(usersaved._id)
+    const findusers = await finduser(chatroomid)
 
-      const findusers = await finduser(chatroomid)
+      
 
-
-      socket.join(chatroomid)
-
-      socket.emit('message', `welcome ${findusers[0].user.username} to saifchat`)
+      socket.emit('message', `welcome ${findusers[0]?.user.username} to saifchat`)
       socket.broadcast
         .to(chatroomid)
         .emit(
           'message',
-          `${findusers[0].user.username} join the chatroom`)
+          `${findusers[0]?.user.username} join the chatroom`)
 
       //collect chatroom users in array
 
@@ -80,7 +84,7 @@ io.on('connection', (socket) => {
       // Send users and room info
       io.to(chatroomid).emit('roomUsers', {
 
-        room: findusers[0].room.name,
+        room: findusers[0]?.room.name,
         users: chatuser,
       });
 
@@ -105,16 +109,23 @@ io.on('connection', (socket) => {
 
   });
 
+ //leave chatuser broadcost to all users
+
+ socket.on('leavechat',(data)=>{
+
+  socket.broadcast.emit('leavechat',data)
+ })
+
 
   // Listen for chatMessage
   socket.on('chatmessage', async (msg) => {
-console.log(msg)
+
     const { chatmessage, chatroomid, userid } = msg
 
     try {
       const savechat = await savemsg(chatmessage, chatroomid, userid)
 
-      const user = await getcurrentuser(socket.id)
+      const user = await getcurrentuser(userid)
 
       io.to(chatroomid).emit('roommessage', {
         userid: savechat.user,
@@ -131,13 +142,26 @@ console.log(msg)
 
   });
 
+  //on room join emit roomuser to other users to display room strenght
+
+
+//   socket.on('roomusers',(data)=>{
+// console.log('Roomyser', data)
+//     socket.broadcast.emit('roomusers',data)
+
+
+//   })
+
 
   // Handle disconnection
   socket.on('disconnect', async () => {
-    console.log(`disconnect ${socket.id}`)
+
+    const userid = socket.userId
+
+    console.log(`disconnect `,userid)
     try {
 
-      const disconetuser = await removeuser(socket.id)
+      const disconetuser = await removeuser(userid)
 
       if (disconetuser) {
 

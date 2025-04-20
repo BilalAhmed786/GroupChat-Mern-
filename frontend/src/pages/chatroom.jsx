@@ -9,13 +9,13 @@ import {SocketContext} from '../contextapi/contextapi'
 
 const chatroomlist = () => {
 
-  const { chatroomid, userid } = useParams();
+  const { chatroomid, userid} = useParams();
   const {sock}= useContext(SocketContext)
 
   return (
     <div className='wrapperchat'>
       <div className='topbarcontainer'>
-        <Topbar />
+        <Topbar  chatroomid={chatroomid} userid={userid} sock={sock}/>
       </div>
       <div className='home'>
         <div className='chatcontainer'>
