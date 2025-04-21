@@ -59,6 +59,8 @@ io.on('connection', (socket) => {
       socket.join(chatroomid)
       socket.join(userid)
 
+
+      
       const usersaved = await saveuser(chatroomid, userid)
 
       socket.broadcast.emit('roomusers', usersaved)

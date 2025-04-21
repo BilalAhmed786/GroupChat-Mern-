@@ -59,7 +59,7 @@ export const collectuser = (findusers) => {
 
   return findusers.map(users => {
 
-    return users.user.username
+    return users.user
 
   })
 }

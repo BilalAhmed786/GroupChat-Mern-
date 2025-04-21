@@ -1,26 +1,30 @@
 import React, { useEffect, useState } from 'react'
 import { BsChatDots, BsPeople } from 'react-icons/bs';
+import { useParams } from 'react-router-dom';
 
 const users = ({ sock }) => {
 
+
+    const {userid} = useParams()
     const [chatroom, stateChatroom ] = useState('')
     const [chatusers, stateChatusers ] = useState([])
 
-    console.log(chatusers)
+    
     useEffect(() => {
-
-        // const socket = sock.connect()
-
         sock?.on('roomUsers', ({ room, users }) => {
-
-            stateChatroom(room)
-            stateChatusers(users)
-           
+            stateChatroom(room);
+    
+            // Move the current user to the top of the list
+            const sortedUsers = [...users].sort((a, b) => {
+                console.log(a._id,b._id)
+                if (a._id === userid) return -1;
+                if (b._id === userid) return 1;
+                return 0;
+            });
+    
+            stateChatusers(sortedUsers);
         });
-
-     
-
-    }, [])
+    }, [sock, userid]);
 
     return (
         <div className='usercontainer'>
@@ -37,7 +41,7 @@ const users = ({ sock }) => {
             {chatusers && chatusers.map((alluser, index) => (
                 <div key={index} className='chatusers'>
 
-                   <p className='ml-12 mt-4'>{alluser}</p>
+                   <p className='ml-12 mt-4'>{alluser._id === userid ? <p className='text-red-500'>You</p> : alluser.username}</p>
                 </div>
 
             ))}
