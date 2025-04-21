@@ -4,7 +4,7 @@ import Sidebar from './sidebarnavmenu';
 import Headers from './headers';
 import Footer from './footer';
 import axios from 'axios';
-import { BsPencil, BsTrash,BsEye } from 'react-icons/bs';
+import { BsPencil, BsTrash, BsEye } from 'react-icons/bs';
 import { toast } from 'react-toastify';
 import messages from '../roomcomponents/messages';
 
@@ -15,22 +15,22 @@ const Allmessages = () => {
     const [magicform, setMagicform] = useState(true);
     const [updateData, setUpdateData] = useState('');
     const [searchUsers, setSearchRoom] = useState('');
-    const [viewmessage, viewMessage] = useState({message:''});
+    const [viewmessage, viewMessage] = useState({ message: '' });
 
 
- 
+
     const editchangehandler = ({ message }) => {
         viewMessage({ message });
         setMagicform(magicform => !magicform);
     };
 
-   
+
 
     const handleDelete = async (id) => {
-      
+
         try {
             const res = await axios.delete(`/api/admin/deletemessage/${id}`);
-            
+
             setUpdateData(res.data);
             toast.success(res.data);
         } catch (error) {
@@ -45,14 +45,14 @@ const Allmessages = () => {
 
     const handlemultiitemDelete = (e) => {
 
-        e.preventDefault()      
+        e.preventDefault()
         const ids = selectedRows.map(row => row._id);
 
-      
+
         axios.post('/api/admin/multiplemessagesdel', ids)
-            
+
             .then((res) => {
-                
+
                 setUpdateData(res.data);
                 toast.success(res.data);
 
@@ -93,14 +93,14 @@ const Allmessages = () => {
             name: 'Actions',
             cell: row => (
                 <div className='flex cursor-pointer'>
-                    <a style={{ marginRight: 20 }} onClick={() => editchangehandler({ message:row.message })}><BsEye /></a>
+                    <a style={{ marginRight: 20 }} onClick={() => editchangehandler({ message: row.message })}><BsEye /></a>
                     <BsTrash onClick={() => handleDelete(row._id)} />
                 </div>
             ),
         },
     ];
 
- 
+
 
     return (
         <>
@@ -133,21 +133,30 @@ const Allmessages = () => {
                                 selectableRows
                                 selectableRowsHighlight
                                 onSelectedRowsChange={handleRowSelected}
-                                
+
                             />
                         </div>
-                        <div style={{ display: magicform ? 'none' : 'block' }} className='absolute top-24 left-20 bg-slate-100 p-10 rounded'>
-                           
-                                <a
-                                    className='w-5 h-5 cursor-pointer text-xxxs float-right -mt-8 -mr-8 bg-red-500 text-white font-bold rounded-full flex items-center justify-center hover:bg-red-700 focus:outline-none'
-                                    onClick={() => setMagicform(true)}
-                                >X</a>
+                        <div style={{ display: magicform ? 'none' : 'block' }} className='absolute top-24 left-20 -mt-12 bg-slate-100 p-10 rounded'>
+                            <a
+                                className='w-5 h-5 cursor-pointer text-xxxs float-right -mt-8 -mr-8 bg-red-500 text-white font-bold rounded-full flex items-center justify-center hover:bg-red-700 focus:outline-none'
+                                onClick={() => setMagicform(true)}
+                            >
+                                X
+                            </a>
+
+                            {viewmessage.message?.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+                                <img
+                                    src={viewmessage.message}
+                                    alt="chat content"
+                                    className='max-w-xs max-h-60 rounded mx-auto'
+                                />
+                            ) : (
                                 <p className='outline-0 p-2 m-2 text-black text-center overflow-auto h-12 w-80'>
                                     {viewmessage.message}
                                 </p>
-                            
-                                
+                            )}
                         </div>
+
                     </div>
                 </div>
             </div>

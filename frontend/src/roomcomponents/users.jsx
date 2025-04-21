@@ -15,11 +15,11 @@ const users = ({ sock }) => {
             stateChatroom(room);
     
             // Move the current user to the top of the list
-            const sortedUsers = [...users].sort((a, b) => {
-                console.log(a._id,b._id)
+            const sortedUsers = users.sort((a, b) => {
+            
                 if (a._id === userid) return -1;
                 if (b._id === userid) return 1;
-                return 0;
+               
             });
     
             stateChatusers(sortedUsers);
