@@ -7,7 +7,7 @@ const topbar = ({chatroomid,userid,sock}) => {
   const navigate = useNavigate()
   const levechathandle = async (e) => {
 
-    sock?.emit('leavechat',{chatroomid,userid})
+    // sock?.emit('leavechat',{chatroomid,userid})
     navigate('/chatroomlist')
 
 

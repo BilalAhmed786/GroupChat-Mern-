@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 dotenv.config();
 import con from './database/db.js';
-import { saveuser, finduser, collectuser, removeuser, getcurrentuser,getjoinUser } from './utils/user.js';
+import { saveuser, finduser, collectuser, removeuser, getcurrentuser, getjoinUser } from './utils/user.js';
 import { savemsg, getmsg } from './utils/messages.js';
 import cors from 'cors'
 import session from 'express-session';
@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({
   extended: true,
   limit: '50mb',         // or more, depending on your use case
-  parameter:100000 //Limit 
+  parameter: 100000 //Limit 
 }));
 app.use(cors());
 const io = new Server(server, {
@@ -38,7 +38,7 @@ app.use(passport.session());
 
 app.use('/auth', router);
 app.use('/admin', adminrouter);
-app.use('/upload',filerouter)
+app.use('/upload', filerouter)
 
 server.listen(process.env.PORT, () => {
   console.log(`Server is running on ${process.env.PORT}`);
@@ -48,26 +48,26 @@ server.listen(process.env.PORT, () => {
 // Set up Socket.IO connection handling
 io.on('connection', (socket) => {
 
- 
+
   socket.on('joinRoom', async (msg) => {
 
     try {
 
-       const { chatroomid, userid } = msg
+      const { chatroomid, userid } = msg
 
-       socket.userId = userid;     
+      socket.userId = userid;
 
-       socket.join(chatroomid)
-       socket.join(userid)
+      socket.join(chatroomid)
+      socket.join(userid)
 
-    const usersaved = await saveuser(chatroomid, userid)
-      
-    socket.broadcast.emit('roomusers',usersaved)
+      const usersaved = await saveuser(chatroomid, userid)
 
-    //  const roomuser = await getjoinUser(usersaved._id)
-    const findusers = await finduser(chatroomid)
+      socket.broadcast.emit('roomusers', usersaved)
 
-      
+      //  const roomuser = await getjoinUser(usersaved._id)
+      const findusers = await finduser(chatroomid)
+
+
 
       socket.emit('message', `welcome ${findusers[0]?.user.username} to saifchat`)
       socket.broadcast
@@ -89,7 +89,7 @@ io.on('connection', (socket) => {
       });
 
       //on login all previous messages will display
-      const messages = await getmsg(chatroomid,userid);
+      const messages = await getmsg(chatroomid, userid);
 
       messages && messages.forEach(message => {
         socket.emit('roommessage', {
@@ -108,13 +108,6 @@ io.on('connection', (socket) => {
 
 
   });
-
- //leave chatuser broadcost to all users
-
- socket.on('leavechat',(data)=>{
-
-  socket.broadcast.emit('leavechat',data)
- })
 
 
   // Listen for chatMessage
@@ -142,23 +135,14 @@ io.on('connection', (socket) => {
 
   });
 
-  //on room join emit roomuser to other users to display room strenght
 
 
-//   socket.on('roomusers',(data)=>{
-// console.log('Roomyser', data)
-//     socket.broadcast.emit('roomusers',data)
+  //leave chatuser broadcost to all users
 
-
-//   })
-
-
-  // Handle disconnection
-  socket.on('disconnect', async () => {
+  socket.on('leavechat', async (data) => {  //on leave chat
 
     const userid = socket.userId
 
-    console.log(`disconnect `,userid)
     try {
 
       const disconetuser = await removeuser(userid)
@@ -184,11 +168,28 @@ io.on('connection', (socket) => {
         }
       }
 
+
+      socket.broadcast.emit('leavechat', data)
+
+
     } catch (error) {
 
       console.log(error)
     }
 
+
+
+
+
+  })
+
+
+  // Handle disconnection
+  socket.on('disconnect', async () => {
+
+    const userid = socket.userId
+
+    console.log(userid)
 
   });
 

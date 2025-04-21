@@ -32,7 +32,7 @@ export const saveuser = async (chatroomid, userid, id) => {
 
 export const finduser = async (chatroomid) => {
 
-  // console.log('chatuserid',chatroomid)
+
     try {
         const findusers = await roomuser.find({ room: chatroomid }).sort({ createdAt: -1 }).populate('user').populate('room')
 
@@ -60,7 +60,7 @@ export const collectuser = (findusers) => {
 
 
 export const removeuser = async (id) => {
-  console.log('removeuserid',id)
+  
   try {
     const disconnectedUser = await roomuser
       .findOneAndDelete({user: id })
@@ -102,6 +102,6 @@ export const getjoinUser =async(userid)=>{
 
     const roomuser = await roomuser.findOne({_id,userid}).populate('room')
 
-console.log(roomuser)
+
 
 }

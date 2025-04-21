@@ -5,7 +5,7 @@ const Messages = ({ sock, chatroomid, userid}) => {
  
   const lastMessageRef = useRef(null);
   const [messages, setMessages] = useState([]);
-// console.log(messages)
+
   useEffect(() => {
    
     sock?.emit('joinRoom', { chatroomid, userid });
@@ -25,9 +25,11 @@ const Messages = ({ sock, chatroomid, userid}) => {
     });
 
     return () => {
+
+      sock?.emit('leavechat',{chatroomid,userid})
       sock?.off('message');
       sock?.off('roommessage');
-      sock?.disconnect()
+      
     };
   }, [sock, chatroomid, userid]);
 
@@ -49,11 +51,6 @@ const Messages = ({ sock, chatroomid, userid}) => {
     }
   };
 
-  // useEffect(()=>{
-  //   return ()=>{
-  //     sock?.disconnect()
-  //   }
-  // },[])
 
   return (
     <div className="messages-container overflow-auto h-[81vh] p-4 space-y-3">

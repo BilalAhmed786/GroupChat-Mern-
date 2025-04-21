@@ -62,8 +62,6 @@ const ChatroomList = () => {
 
     useEffect(()=>{
      
-      sock?.connect()
-
       const handleRoomuser =(data)=>{
         
         setRoomUsers((prev) => {

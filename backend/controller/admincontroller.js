@@ -227,10 +227,6 @@ export const allusers = async (req, res) => {
             rooms: rooms
         }
 
-
-
-
-        console.log(usersroom)
         return res.json(usersroom)
     } catch (error) {
 
