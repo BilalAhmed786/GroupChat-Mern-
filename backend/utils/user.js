@@ -5,44 +5,50 @@ import trackuser from '../models/trackusers.js';
 
 export const saveuser = async (chatroomid, userid, id) => {
 
-  
-    try {
-      // Track user messages
-      const trkuser = await trackuser.findOne({ user: userid });
-  
-      if (!trkuser) {
-        const trakuser = new trackuser({ user: userid, room: chatroomid });
-        await trakuser.save();
-      }
-  
-     
+
+  try {
+    // Track user messages
+    const trkuser = await trackuser.findOne({ user: userid });
+
+    if (!trkuser) {
+      const trakuser = new trackuser({ user: userid, room: chatroomid });
+      await trakuser.save();
+    }
+
+    const usersavedalready = await roomuser.findOne({ user: userid })
+
+    if (!usersavedalready) {
+
       const user = new roomuser({ room: chatroomid, user: userid });
       const joinuser = await user.save();
-  
+
       const userjoin = await roomuser
         .findOne({ _id: joinuser._id })
         .populate('room');
-  
+
       return userjoin;
-    } catch (error) {
-      console.log(error);
+
     }
-  };
-  
+
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
 export const finduser = async (chatroomid) => {
 
 
-    try {
-        const findusers = await roomuser.find({ room: chatroomid }).sort({ createdAt: -1 }).populate('user').populate('room')
+  try {
+    const findusers = await roomuser.find({ room: chatroomid }).sort({ createdAt: -1 }).populate('user').populate('room')
 
 
-        return findusers
-    } catch (error) {
+    return findusers
+  } catch (error) {
 
-        console.log(error)
+    console.log(error)
 
-    }
+  }
 
 
 }
@@ -51,19 +57,19 @@ export const finduser = async (chatroomid) => {
 export const collectuser = (findusers) => {
 
 
-    return findusers.map(users => {
+  return findusers.map(users => {
 
-        return users.user.username
+    return users.user.username
 
-    })
+  })
 }
 
 
 export const removeuser = async (id) => {
-  
+
   try {
     const disconnectedUser = await roomuser
-      .findOneAndDelete({user: id })
+      .findOneAndDelete({ user: id })
       .populate('user')
       .populate('room');
 
@@ -81,26 +87,26 @@ export const removeuser = async (id) => {
 
 
 export const getcurrentuser = async (id) => {
-    
-    try {
 
-        const getcurrentuser = await roomuser.findOne({ user: id }).populate('user')
+  try {
 
-        return getcurrentuser
+    const getcurrentuser = await roomuser.findOne({ user: id }).populate('user')
+
+    return getcurrentuser
 
 
-    } catch (error) {
+  } catch (error) {
 
-        console.log(error)
-    }
+    console.log(error)
+  }
 
 }
 
-export const getjoinUser =async(userid)=>{
+export const getjoinUser = async (userid) => {
 
 
 
-    const roomuser = await roomuser.findOne({_id,userid}).populate('room')
+  const roomuser = await roomuser.findOne({ _id, userid }).populate('room')
 
 
 

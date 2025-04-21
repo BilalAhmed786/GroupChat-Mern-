@@ -56,7 +56,6 @@ io.on('connection', (socket) => {
       const { chatroomid, userid } = msg
 
       socket.userId = userid;
-
       socket.join(chatroomid)
       socket.join(userid)
 

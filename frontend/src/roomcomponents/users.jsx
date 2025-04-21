@@ -5,6 +5,8 @@ const users = ({ sock }) => {
 
     const [chatroom, stateChatroom ] = useState('')
     const [chatusers, stateChatusers ] = useState([])
+
+    console.log(chatusers)
     useEffect(() => {
 
         // const socket = sock.connect()
