@@ -24,11 +24,38 @@ const Messages = ({ sock, chatroomid, userid}) => {
       ]);
     });
 
+
+    sock?.on('messageDelete',(data)=>{
+
+
+      setMessages((prev)=>{
+         
+        return prev.filter((msgs)=>msgs._id !== data._id)
+
+      })
+
+      console.log(data)
+    })
+
+    sock?.on('multiplemsgDel',(data)=>{
+
+        const messagesids = data.map((msgs)=>msgs._id)
+
+        setMessages((prev)=>{
+
+          return prev.filter((msg)=> !messagesids.includes(msg._id))
+        })
+
+
+    })
+
     return () => {
 
       sock?.emit('leavechat',{chatroomid,userid})
       sock?.off('message');
       sock?.off('roommessage');
+      sock?.off('messageDelete');
+      sock?.off('multiplemsgDel');
       
     };
   }, [sock, chatroomid, userid]);

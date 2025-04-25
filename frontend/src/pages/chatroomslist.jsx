@@ -4,18 +4,18 @@ import axios from 'axios';
 import { BsPeople } from 'react-icons/bs';
 import Headers from './headers';
 import Footer from './footer';
-import {SocketContext} from '../contextapi/contextapi'
+import { SocketContext } from '../contextapi/contextapi'
 
 const ChatroomList = () => {
-  
+
   const navigate = useNavigate();
   const [chatroomdata, setRoomdata] = useState([]);
   const [userdata, setUserdata] = useState(null);
   const [searchroom, setSearchRoom] = useState('');
   const [roomusers, setRoomUsers] = useState([]);
   const [blockusers, setBlockUsers] = useState([]);
-  const {sock}= useContext(SocketContext)
-
+  const { sock } = useContext(SocketContext)
+  
   useEffect(() => {
     axios.get(`/api/admin/createroom?search=${searchroom}`)
       .then((response) => {
@@ -50,7 +50,7 @@ const ChatroomList = () => {
     axios.get('/api/admin/blockuser')
       .then((result) => {
         setBlockUsers(result.data);
-        sock?.emit('blockusers',result.data)
+        sock?.emit('blockusers', result.data)
       })
       .catch((error) => {
         console.log(error);
@@ -58,45 +58,115 @@ const ChatroomList = () => {
 
   }, []);
 
-    //socket working
+  //socket working
 
-    useEffect(()=>{
-     
-      const handleRoomuser =(data)=>{
-        
-        setRoomUsers((prev) => {
-          const userExists = prev.some((user) => user.user === data.user); // ✅ Use `some` for boolean check
-      
-          if (userExists) {
-            return [...prev]; // Just return previous if user already exists
-          } else {
-            return [...prev, data]; // Add new user if not exists
-          }
+  useEffect(() => {
+
+    const handleRoomuser = (data) => {
+
+      setRoomUsers((prev) => {
+        const userExists = prev.some((user) => user.user === data.user); // ✅ Use `some` for boolean check
+
+        if (userExists) {
+          return [...prev]; // Just return previous if user already exists
+        } else {
+          return [...prev, data]; // Add new user if not exists
+        }
+      });
+
+
+    }
+
+
+    const handleLeavechat = (data) => {
+
+      setRoomUsers((prev) => prev.filter((user) => user.user !== data.userid))
+    }
+
+
+    const handleBlockuser = (data) => {
+
+
+      setBlockUsers((prev) => {
+
+        const userexist = prev.some((user) => user.user._id === data.user._id)
+
+        if (userexist) {
+
+          return prev.filter((user) => user.user._id !== data.user._id)
+
+
+        } else {
+
+          return [...prev, data]
+        }
+
+
+
+      })
+
+    }
+
+
+    const handleCreateroom = (data)=>{
+
+          setRoomdata((prev)=>{
+
+                return [...prev,data]
+
+          })
+
+    }
+
+    const handleUpdateroom = (data) => {
+      setRoomdata((prev) => {
+        return prev.map((room) => {
+          return room._id === data._id
+            ? {
+                ...room,
+                name: data.name,
+              }
+            : room;
         });
+      });
+    };
+    const handleDeleteroom = (data) => {
+      setRoomdata((prev) => {
+        return prev.filter((room)=>room._id !== data._id)
+      });
+    };
+
+    const handleDeleterooms = (data) => {
+      const idsToDelete = data.map((room) => room._id);
+    
+      setRoomdata((prev) => {
+        return prev.filter((room) => !idsToDelete.includes(room._id));
+      });
+    };
+    
+
+    sock?.on('roomusers', handleRoomuser)
+    sock?.on('leavechat', handleLeavechat)
+    sock?.on('blockuserid', handleBlockuser)
+    sock?.on('createRoom', handleCreateroom)
+    sock?.on('updateRoom', handleUpdateroom)
+    sock?.on('deleteRoom', handleDeleteroom)
+    sock?.on('deleteRooms', handleDeleterooms)
 
 
-      }
+
+    return () => {
 
 
-      const handleLeavechat = (data)=>{
+      sock?.off('roomusers', handleRoomuser)
+      sock?.off('leavechat', handleLeavechat)
+      sock?.off('blockuserid', handleBlockuser)
+      sock?.off('createRoom', handleCreateroom)
+      sock?.off('updateRoom', handleUpdateroom)
+      sock?.off('deleteRooms', handleDeleterooms)
+    }
 
-        setRoomUsers((prev)=> prev.filter((user)=>user.user !== data.userid))
-      }
-
-
-        sock?.on('roomusers',handleRoomuser)
-        sock?.on('leavechat',handleLeavechat)
-
-
-
-      return ()=>{
-
-
-          sock?.off('roomusers',handleRoomuser)
-          sock?.off('leavechat',handleLeavechat)
-      }
-
-    },[sock])
+  }, [sock])
 
 
   return (

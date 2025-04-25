@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import DataTable from 'react-data-table-component';
 import Sidebar from './sidebarnavmenu';
 import Headers from './headers';
@@ -6,8 +6,10 @@ import Footer from './footer';
 import axios from 'axios';
 import { BsPencil, BsTrash } from 'react-icons/bs';
 import { toast } from 'react-toastify';
+import { SocketContext } from '../contextapi/contextapi';
 
 const AllRooms = () => {
+    
     const [data, setData] = useState([]);   
     const [selectedRows, setSelectedRows] = useState([]);
     const [selectedItems, setSelectedItems] = useState(0);
@@ -15,6 +17,7 @@ const AllRooms = () => {
     const [updateData, setUpdateData] = useState('');
     const [searchRoom, setSearchRoom] = useState('');
     const [editname, setEditname] = useState({ name: '', id: '' });
+    const {sock}  =  useContext(SocketContext)
 
     const formhandler = (e) => {
         const { name, value } = e.target;
@@ -35,8 +38,9 @@ const AllRooms = () => {
         axios.post('/api/admin/editroom', editname)
             .then((res) => {
                 setUpdateData(res.data);
-                toast.success(res.data);
+                toast.success(res.data.msg);
                 setMagicform(true); // Close the edit form
+                sock?.emit('updateRoom',res.data.updateroom)
             })
             .catch((error) => {
                 toast.error(error.response.data);
@@ -47,7 +51,8 @@ const AllRooms = () => {
         try {
             const res = await axios.get(`/api/admin/deleteroom/${id}`);
             setUpdateData(res.data);
-            toast.success(res.data);
+            toast.success(res.data.msg);
+            sock?.emit('deleteRoom',res.data.deleteroom)
         } catch (error) {
             console.log(error);
         }
@@ -64,7 +69,8 @@ const AllRooms = () => {
         axios.post('/api/admin/multipleitemdel', ids )
             .then((res) => {
                 setUpdateData(res.data);
-                toast.success(res.data);
+                toast.success(res.data.msg);
+                sock?.emit('deleteRooms',res.data.deletedRooms)
 
                 window.location.reload();   
             })

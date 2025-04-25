@@ -1,17 +1,21 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 
 import axios from 'axios'; // Import Axios
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import {SocketContext} from '../contextapi/contextapi'
 
 const Login = () => {
+
+
   const navigate = useNavigate()
   const [email, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [userdetail, setuserdetail] = useState('')
+   const {sock}= useContext(SocketContext)
 
-console.log(userdetail)
+// console.log(userdetail)
   const userdet = async () => {
 
     try {
@@ -20,6 +24,7 @@ console.log(userdetail)
       if (user.data.username) {
 
         setuserdetail(user.data.role)
+        sock?.emit('userjoin',user.data._id)
 
       }
 

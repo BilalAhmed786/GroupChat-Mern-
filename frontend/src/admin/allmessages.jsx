@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import DataTable from 'react-data-table-component';
 import Sidebar from './sidebarnavmenu';
 import Headers from './headers';
@@ -6,9 +6,10 @@ import Footer from './footer';
 import axios from 'axios';
 import { BsPencil, BsTrash, BsEye } from 'react-icons/bs';
 import { toast } from 'react-toastify';
-import messages from '../roomcomponents/messages';
+import { SocketContext } from '../contextapi/contextapi';
 
 const Allmessages = () => {
+    
     const [data, setData] = useState([]);
     const [selectedRows, setSelectedRows] = useState([]);
     const [selectedItems, setSelectedItems] = useState(0);
@@ -16,7 +17,7 @@ const Allmessages = () => {
     const [updateData, setUpdateData] = useState('');
     const [searchUsers, setSearchRoom] = useState('');
     const [viewmessage, viewMessage] = useState({ message: '' });
-
+    const {sock}  =  useContext(SocketContext)
 
 
     const editchangehandler = ({ message }) => {
@@ -32,7 +33,8 @@ const Allmessages = () => {
             const res = await axios.delete(`/api/admin/deletemessage/${id}`);
 
             setUpdateData(res.data);
-            toast.success(res.data);
+            toast.success(res.data.msg);
+            sock?.emit('messageDelete',res.data.messageroom)
         } catch (error) {
             console.log(error);
         }
@@ -54,7 +56,8 @@ const Allmessages = () => {
             .then((res) => {
 
                 setUpdateData(res.data);
-                toast.success(res.data);
+                toast.success(res.data.msg);
+                sock?.emit('multiplemsgDel',res.data.messages)
 
                 window.location.reload();
             })
@@ -76,7 +79,7 @@ const Allmessages = () => {
     const columns = [
         {
             name: 'UserName',
-            selector: (row) => row.user.username,
+            selector: (row) => row.user?.username  || 'User',
             sortable: true,
         },
         {

@@ -48,6 +48,14 @@ server.listen(process.env.PORT, () => {
 // Set up Socket.IO connection handling
 io.on('connection', (socket) => {
 
+  socket.on('userjoin', (userid) => { //login user socket connected with their ids
+
+    socket.userId = userid;
+    socket.join(userid)
+
+
+  })
+
 
   socket.on('joinRoom', async (msg) => {
 
@@ -55,12 +63,7 @@ io.on('connection', (socket) => {
 
       const { chatroomid, userid } = msg
 
-      socket.userId = userid;
       socket.join(chatroomid)
-      socket.join(userid)
-
-
-      
       const usersaved = await saveuser(chatroomid, userid)
 
       socket.broadcast.emit('roomusers', usersaved)
@@ -94,8 +97,9 @@ io.on('connection', (socket) => {
 
       messages && messages.forEach(message => {
         socket.emit('roommessage', {
+          _id:message._id,
           userid: message.user,
-          name: message.user.username,
+          name: message.user?.username,
           message: message.message,
           formattedTimestamp: message.formattedTimestamp
         });
@@ -122,6 +126,7 @@ io.on('connection', (socket) => {
       const user = await getcurrentuser(userid)
 
       io.to(chatroomid).emit('roommessage', {
+        _id:savechat._id,
         userid: savechat.user,
         name: user.user.username,
         message: savechat.message,
@@ -142,11 +147,9 @@ io.on('connection', (socket) => {
 
   socket.on('leavechat', async (data) => {  //on leave chat
 
-    const userid = socket.userId
-
     try {
 
-      const disconetuser = await removeuser(userid)
+      const disconetuser = await removeuser(data.userid)
 
       if (disconetuser) {
 
@@ -177,18 +180,101 @@ io.on('connection', (socket) => {
 
       console.log(error)
     }
+  })
+
+  //admin panel working
+  //blockuser notify on real-time
+
+  socket.on('createRoom', (data) => {
+
+    socket.broadcast.emit('createRoom', data)
+
+  })
+
+  socket.on('updateRoom', (data) => {
+    console.log("updateroom:", data)
+    socket.broadcast.emit('updateRoom', data)
+
+  })
+  socket.on('deleteRoom', (data) => {
+
+    socket.broadcast.emit('deleteRoom', data)
+
+  })
+  socket.on('deleteRooms', (data) => {
+
+    socket.broadcast.emit('deleteRooms', data)
+
+  })
 
 
+  socket.on('userDelete', (id) => {
+    console.log('removeuser:', id)
+    socket.to(id).emit('userDelete', id)
 
+  })
+  socket.on('multiUserdel', (ids) => {
+
+    ids.map((id) => {
+
+      socket.to(id).emit('userDelete', id)
+
+    })
 
 
   })
 
 
+  socket.on('blockuserid', (data) => {
+
+    socket.to(data.user._id).emit('blockuserid', data)
+
+  })
+
+
+  socket.on('multiblockuser', (users) => {
+    users.forEach((user) => {
+      const userId = user.user?._id;
+      if (userId) {
+        socket.to(userId).emit("blockuserid", user);
+      }
+    });
+  });
+
+  //message delete by admin
+
+  socket.on('messageDelete',(data)=>{
+
+    socket.to(data.room).emit('messageDelete', data);
+
+
+  })
+
+  //multiple messages delete
+
+  socket.on('multiplemsgDel', (data) => {
+    const roomMap = {};
+  
+    data.forEach((msgdel) => {
+      if (!roomMap[msgdel.room]) {
+        roomMap[msgdel.room] = [];
+      }
+      roomMap[msgdel.room].push(msgdel);
+    });
+  
+    // Emit once per room with all messages
+    Object.entries(roomMap).forEach(([room, messages]) => {
+      socket.to(room).emit('multiplemsgDel', messages);
+    });
+  });
+  
+ 
+
+
   // Handle disconnection
   socket.on('disconnect', async () => {
 
-    const userid = socket.userId
+    const userid = await socket.userId
 
     console.log(userid)
 

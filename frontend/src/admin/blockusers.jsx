@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import DataTable from 'react-data-table-component';
 import Sidebar from './sidebarnavmenu';
 import Headers from './headers';
@@ -6,6 +6,7 @@ import Footer from './footer';
 import axios from 'axios';
 import { BsTrash } from 'react-icons/bs';
 import { toast } from 'react-toastify';
+import { SocketContext } from '../contextapi/contextapi';
 
 const Blockusers = () => {
     const [data, setData] = useState([]);
@@ -13,14 +14,17 @@ const Blockusers = () => {
     const [selectedItems, setSelectedItems] = useState(0);
     const [updateData, setUpdateData] = useState('');
     const [searchUsers, setSearchUsers] = useState('');
- 
+    const {sock}  = useContext(SocketContext)
 
     const handleDelete = async (id) => {
-       
+       alert(id)
         try {
             const res = await axios.delete(`/api/admin/deleteblockuser?id=${id}`);
+
+            console.log(res.data)
             setUpdateData(res.data);
-            toast.success(res.data);
+            toast.success(res.data.msg);
+            sock?.emit('blockuserid',res.data.user)
         } catch (error) {
             console.log(error);
         }
@@ -32,11 +36,15 @@ const Blockusers = () => {
     };
 
     const handlemultiitemDelete = () => {
-        const ids = selectedRows.map(row => row._id);
-        axios.post('/api/admin/multipleblockusersdel', ids)
+        const ids = selectedRows.map(row => row.user._id);
+        console.log(ids)
+        axios.post('/api/admin/multipleblockusersdel', { ids })
             .then((res) => {
+
+                console.log(res.data.users)
                 setUpdateData(res.data);
-                toast.success(res.data);
+                toast.success(res.data.msg);
+                sock?.emit('multiblockuser',res.data.users)
                 window.location.reload();
             })
             .catch((error) => {
@@ -83,7 +91,7 @@ const Blockusers = () => {
             name: 'Actions',
             cell: row => (
                 <div className='flex cursor-pointer'>
-                    <BsTrash onClick={() => handleDelete(row._id)} />
+                    <BsTrash onClick={() => handleDelete(row.user._id)} />
                 </div>
             ),
             width: '150px',

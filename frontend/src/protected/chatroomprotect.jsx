@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useContext, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
+import { SocketContext } from '../contextapi/contextapi';
 
 const Chatroomprotect = (props) => {
+  
   const {Component} = props
 const [data,userData]=useState('')
-
-   const navigate = useNavigate()
+  const [userremove,setUserremove] = useState('')
+  const {sock} = useContext(SocketContext)
+const navigate = useNavigate()
    
 useEffect(()=>{
 
@@ -43,8 +46,25 @@ useEffect(()=>{
       userdet()
 
 
-},[])
+},[userremove])
+//for socket 
 
+useEffect(()=>{
+
+const handleUserremove =  (id)=>{
+console.log(id)
+  setUserremove(id)
+
+}
+
+
+sock?.on('userDelete',handleUserremove)
+return ()=>{
+
+sock?.off('userDelete',handleUserremove)
+}
+
+},[])
  
 
 return (

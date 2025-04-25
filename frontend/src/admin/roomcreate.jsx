@@ -1,14 +1,16 @@
-import React, { useRef, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Sidebar from './sidebarnavmenu';
 import Headers from './headers';
 import Footer from './footer';
+import { SocketContext } from '../contextapi/contextapi';
 const AddRoomForm = () => {
 
     const formRef = useRef(null);
     const [roomName, setRoomName] = useState('');
     const [description, setDescription] = useState('');
+    const {sock}  = useContext(SocketContext)
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,8 +22,8 @@ const AddRoomForm = () => {
             if (response.data) {
 
 
-                toast.success(response.data)
-
+                toast.success(response.data.msg)
+                sock?.emit('createRoom',response.data.room)
 
             }
 

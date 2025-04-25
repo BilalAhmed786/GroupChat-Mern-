@@ -8,6 +8,8 @@ import { BsPencil, BsTrash } from 'react-icons/bs';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
 import Switch from 'react-switch';
+import { useContext } from 'react';
+import { SocketContext } from '../contextapi/contextapi';
 
 const Allusers = () => {
     const [data, setData] = useState({ users: [], rooms: [] });
@@ -19,7 +21,9 @@ const Allusers = () => {
     const [blockedUsers, setBlockedUsers] = useState({});
     const [editusers, setEditusers] = useState({ name: '', email: '', role: '', id: '' });
     const [selectedRoom, setSelectedRoom] = useState({});
-console.log(selectedRoom)
+    const {sock}  = useContext(SocketContext)
+
+
     const formhandler = (e) => {
         const { name, value } = e.target;
         setEditusers({
@@ -40,6 +44,7 @@ console.log(selectedRoom)
                 setUpdateData(res.data);
                 toast.success(res.data);
                 setMagicform(true); // Close the edit form
+               
             })
             .catch((error) => {
                 toast.error(error.response.data);
@@ -49,8 +54,14 @@ console.log(selectedRoom)
     const handleDelete = async (id) => {
         try {
             const res = await axios.delete(`/api/admin/deleteuser/${id}`);
-            setUpdateData(res.data);
-            toast.success(res.data);
+
+            if(res.data){
+                setUpdateData(res.data);
+                toast.success(res.data);
+                sock?.emit('userDelete',id)
+            }
+            
+          
         } catch (error) {
             console.log(error);
         }
@@ -67,6 +78,7 @@ console.log(selectedRoom)
             .then((res) => {
                 setUpdateData(res.data);
                 toast.success(res.data);
+                sock?.emit('multiUserdel',ids)
                 window.location.reload();
             })
             .catch((error) => {
@@ -75,18 +87,24 @@ console.log(selectedRoom)
     };
 
     const handleBlockToggle = async (userId, roomName, isBlocked) => {
-        console.log(userId,roomName,isBlocked)
+     
         try {
               const response =  await axios.post('/api/admin/blockuser', { userId, roomName, isBlocked });
-            setBlockedUsers(prevState => ({
+           
+              setBlockedUsers(prevState => ({
                 ...prevState,
                 [userId]: {
                     ...prevState[userId],
                     [roomName]: isBlocked,
                 }
             }));
-            
-            toast.success(response.data)
+            if(response.data){
+           
+                toast.success(response.data)
+                sock?.emit('blockuserid',response.data)
+
+
+            }
             // toast.success(`${isBlocked ? 'Blocked' : 'Unblocked'} user in ${roomName}`);
         } catch (error) {
             toast.error(error.response.data);
@@ -201,6 +219,7 @@ console.log(selectedRoom)
                                 >X</a>
                                 <input
                                     className='w-full h-7 outline-0 p-2 m-2 text-black text-center'
+                                    readOnly
                                     name='name'
                                     type='text'
                                     value={editusers.name}
@@ -208,6 +227,7 @@ console.log(selectedRoom)
                                 /><br />
                                 <input
                                     className='w-full h-7 outline-0 p-2 m-2 text-black text-center'
+                                    readOnly
                                     name='email'
                                     type='text'
                                     value={editusers.email}

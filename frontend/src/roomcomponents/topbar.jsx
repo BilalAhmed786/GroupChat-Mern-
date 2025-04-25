@@ -1,17 +1,53 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const topbar = ({chatroomid,userid,sock}) => {
 
   
   const navigate = useNavigate()
+  const [userId,setUserid] = useState('')
+
   const levechathandle = async (e) => {
 
-    // sock?.emit('leavechat',{chatroomid,userid})
+   
     navigate('/chatroomlist')
 
 
   }
+
+//incase userinside chatroom and blocked by admin
+  if(userId === userid ){
+
+      levechathandle()
+
+  }
+
+    useEffect(()=>{
+
+      const handleBlockuser = (data)=>{
+
+          setUserid(data.user._id)
+
+      }
+
+      const handleUserremove = (id)=>{
+        
+        setUserid(id)
+
+      }
+
+      sock?.on('blockuserid',handleBlockuser)
+      sock?.on('userDelete',handleUserremove)
+
+
+        return ()=>{
+
+        sock?.off('blockuserid',handleBlockuser)
+        sock?.off('userDelete',handleUserremove)
+
+      }
+    },[])
+
   return (
     <div className='topbar'>
 

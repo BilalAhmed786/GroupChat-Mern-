@@ -3,6 +3,9 @@ import ChatRoom from "../models/chatroom.js"
 import roomuser from "../models/roomusers.js"
 import User from "../models/users.js";
 import Blockuser from "../models/blockuser.js";
+import trackuser from "../models/trackusers.js";
+import s3 from "../s3/s3.js";
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 
 
@@ -37,7 +40,7 @@ export const roomcreate = async (req, res) => {
 
 
 
-            return res.json('room creates successfully')
+            return res.json({ room: roomcreate, msg: 'room creates successfully' })
 
         }
 
@@ -108,9 +111,14 @@ export const roomedit = async (req, res) => {
 
         const updateroom = await ChatRoom.findByIdAndUpdate(id, { name })
 
-        if (updateroom) {
+        const updatedroom = await ChatRoom.findOne({ _id: updateroom._id })
 
-            return res.json("update successfully")
+        if (updatedroom) {
+
+            return res.json({
+                updateroom: updatedroom,
+                msg: "update successfully"
+            })
 
         }
 
@@ -132,11 +140,17 @@ export const deleteroom = async (req, res) => {
 
         const chatroom = await ChatRoom.findByIdAndDelete(id)
 
+        console.log("deleteRoom", chatroom)
+
         if (chatroom) {
 
             await Message.deleteMany({ room: id })
 
-            return res.json('delete successfully')
+            return res.json(
+                {
+                    deleteroom: chatroom,
+                    msg: 'delete successfully'
+                })
         }
 
 
@@ -151,47 +165,38 @@ export const deleteroom = async (req, res) => {
 
 }
 
-export const multiitemdel = (req, res) => {
+export const multiitemdel = async (req, res) => {
+    const roomsid = req.body;
 
-    const roomsid = req.body
-
-    if (roomsid.length === 0) {
-
-
-        return res.status(400).json('u didnt select any row')
-
+    if (!roomsid || roomsid.length === 0) {
+        return res.status(400).json('You didn’t select any row');
     }
 
-    ChatRoom.deleteMany({ _id: { $in: roomsid } })
+    try {
+        // Step 1: Find rooms to be deleted
+        const deletedRooms = await ChatRoom.find({ _id: { $in: roomsid } });
 
-        .then(() => {
+        if (deletedRooms.length === 0) {
+            return res.status(404).json('No matching rooms found');
+        }
 
-            res.json('deleted success fully')
+        // Step 2: Delete rooms and related messages
+        await Promise.all([
+            ChatRoom.deleteMany({ _id: { $in: roomsid } }),
+            Message.deleteMany({ room: { $in: roomsid } }),
+        ]);
 
-        })
-        .catch((error) => {
+        // Step 3: Send back deleted room details
+        res.json({
+            msg: 'Selected rooms and their messages deleted successfully',
+            deletedRooms: deletedRooms,
+        });
 
-            console.log(error)
-
-        })
-
-
-    Message.deleteMany({ room: { $in: roomsid } })
-
-        .then(() => {
-
-            console.log('selected room message deleted')
-
-        })
-        .catch((error) => {
-
-            console.log(error)
-
-        })
-
-
-}
-
+    } catch (error) {
+        console.error(error);
+        res.status(500).json('Something went wrong while deleting rooms or messages');
+    }
+};
 export const allusers = async (req, res) => {
 
     const { search } = req.query
@@ -272,52 +277,47 @@ export const edituser = async (req, res) => {
 }
 
 
-export const deleteuser = (req, res) => {
+export const deleteuser = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-    const { id } = req.params
+        await Promise.all([
+            User.findByIdAndDelete(id),
+            roomuser.findOneAndDelete({ user: id }),
+            trackuser.findOneAndDelete({ user: id }),
+            Blockuser.findOneAndDelete({ user: id })
+        ]);
 
-    console.log(id)
+        return res.status(200).json({ message: 'User and related data deleted successfully' });
 
-    User.findByIdAndDelete(id)
-
-        .then((result) => {
-
-            console.log(result);
-
-            return res.json('user deleted successfully')
-
-        })
-        .catch((error) => {
-
-            console.log(error)
-        })
-}
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: 'Something went wrong' });
+    }
+};
 
 
-export const multideleteuser = (req, res) => {
+export const multideleteuser = async (req, res) => {
+    const ids = req.body;
 
-
-    const ids = req.body
-
-    if (ids.length === 0) {
-
-
-        return res.status(400).json('u didnot select any row')
+    if ( ids.length === 0) {
+        return res.status(400).json('You did not select any row');
     }
 
-    User.deleteMany({ _id: { $in: ids } })
-        .then(() => {
+    try {
+        await Promise.all([
+            User.deleteMany({ _id: { $in: ids } }),
+            roomuser.deleteMany({ user: { $in: ids } }),
+            trackuser.deleteMany({ user: { $in: ids } }),
+            Blockuser.deleteMany({ user: { $in: ids } })
+        ]);
 
-            res.json('deleted successfully')
-
-        })
-        .catch((error) => {
-
-            console.log(error)
-        })
-
-
-}
+        return res.status(200).json('User and related data deleted successfully');
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'An error occurred while deleting users', error });
+    }
+};
 
 
 export const allmessages = async (req, res) => {
@@ -353,144 +353,145 @@ export const allmessages = async (req, res) => {
 }
 
 
-export const deletemessage = (req, res) => {
+export const deletemessage = async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      const message = await Message.findById(id);
+  
+      if (!message) {
+        return res.status(404).json({ message: 'Message not found' });
+      }
+  
+      const content = message.message;
+  
+      // ✅ Check if it's an S3-hosted image via CloudFront
+      if (content && content.includes(process.env.CLOUDFRONT_DOMAIN)) {
+        // Extract the key from CloudFront URL
+        const url = new URL(content);
+        const key = decodeURIComponent(url.pathname.substring(1)); // removes leading "/"
+  
+        // Delete image from S3
+        const deleteParams = {
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: key,
+          };
+          const deleteCommand = new DeleteObjectCommand(deleteParams);
+         
+          await s3.send(deleteCommand);
+ 
+          console.log(`Deleted image from S3: ${key}`);
+      }
+  
+      // Delete the message from MongoDB
+     const messageroom = await Message.findByIdAndDelete(id);
+  
+      return res.status(200).json(
+        {
+            msg:'message delete successfully',
+            messageroom
 
-
-    const { id } = req.params
-
-    console.log(id)
-    Message.findByIdAndDelete(id)
-
-        .then(() => {
-
-            console.log('deleted')
-
-            return res.json('message deleted successfully')
-        })
-
-        .catch((error) => {
-
-            console.log(error)
-        })
-
-
-}
-
-export const multidelmessage = (req, res) => {
-
-    const ids = req.body
-
-    if (ids.length === 0) {
-
-
-        return res.status(400).json('u didnot select any row')
-
+          }
+    );
+    } catch (error) {
+      console.error('Delete error:', error);
+      return res.status(500).json({ error: 'Something went wrong' });
     }
+  };
 
 
-    Message.deleteMany({ _id: { $in: ids } })
+  export const multidelmessage = async (req, res) => {
+    const ids = req.body;
+  
+    if (!ids || ids.length === 0) {
+      return res.status(400).json('You did not select any messages');
+    }
+  
+    try {
+      // Step 1: Fetch messages
+      const messages = await Message.find({ _id: { $in: ids } });
+  
+      // Step 2: Identify and delete any S3-stored images
+      const imageDeletes = messages
+        .filter((msg) => msg.message?.includes(process.env.CLOUDFRONT_DOMAIN))
+        .map((msg) => {
+          const url = new URL(msg.message);
+          const key = decodeURIComponent(url.pathname.substring(1)); // remove "/"
+          const command = new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: key,
+          });
+          return s3.send(command);
+        });
+  
+      // Step 3: Wait for all deletions
+      await Promise.all(imageDeletes);
+  
+      // Step 4: Delete messages from DB
+      await Message.deleteMany({ _id: { $in: ids } });
+  
+      console.log('Deleted selected messages and images');
+      return res.json(
+        {
+          msg:'Selected messages deleted successfully',
+          messages
+    
+        });
+    } catch (error) {
+      console.error('Error during multi-delete:', error);
+      return res.status(500).json({ error: 'Something went wrong during deletion' });
+    }
+  };
 
-        .then(() => {
 
-
-            console.log('deleted selected messages')
-
-            return res.json('selected item deleted')
-        })
-        .catch((error) => {
-
-            console.log(error)
-        })
-
-
-
-
-}
-
-
-export const blockuser = (req, res) => {
-
-    const { userId, roomName, isBlocked } = req.body
+export const blockuser = async (req, res) => {
+    const { userId, roomName, isBlocked } = req.body;
 
     if (!roomName) {
-
-        return res.status(400).json("Room not selected")
-
+        return res.status(400).json("Room not selected");
     }
 
-    if (isBlocked === true) {
+    try {
+        if (isBlocked === true) {
+            const existing = await Blockuser.findOne({ user: userId, roomname: roomName });
+
+            if (existing) {
+                return res.status(400).json(`User already blocked in room ${existing.roomname}`);
+            }
+
+            const newBlock = await new Blockuser({ roomname: roomName, user: userId }).save();
+            const populatedBlock = await Blockuser.findById(newBlock._id).populate('user');
+
+            // Optionally remove user from the room
+            await roomuser.findOneAndDelete({ user: userId });
+
+            return res.json(populatedBlock);
+        }
+
+        else if (isBlocked === false) {
+            // Step 1: Find the block document with populated user
+            const blockDoc = await Blockuser.findOne({ user: userId, roomname: roomName }).populate('user');
+
+            if (blockDoc) {
+                // Step 2: Delete the block document
+                await Blockuser.findByIdAndDelete(blockDoc._id);
 
 
-        Blockuser.findOne({ user: userId, roomname: roomName })
 
-            .then((result) => {
+                return res.json(blockDoc);
+            }
+        }
 
-                if (result) {
+        else {
+            return res.status(400).json("Invalid isBlocked value");
+        }
 
-                    return res.status(400).json(`user already block ${result.roomname}`)
-
-                }
-
-
-                new Blockuser({ roomname: roomName, user: userId }).save()
-                    .then(() => {
-
-                        console.log('block user saved')
-
-                        return res.json('user blocked successfully')
-                    })
-                    .catch((error) => {
-
-                        console.log(error)
-                    })
-
-
-            })
-            .catch((error) => {
-
-                console.log(error)
-            })
-
-
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json("Something went wrong");
     }
+};
 
-
-    if (isBlocked === false) {
-
-
-
-        Blockuser.findOneAndDelete({ user: userId, roomname: roomName })
-
-            .then((result) => {
-
-                if (result) {
-
-
-                    console.log(result)
-
-                    return res.json('user unblock successfully')
-
-
-
-                } else {
-
-                    console.log('No matching document found');
-                }
-
-            })
-
-            .catch((error) => {
-
-                console.log(error)
-            })
-
-
-
-    }
-
-
-
-}
 
 
 export const getblockuser = (req, res) => {
@@ -532,40 +533,50 @@ export const getblockuser = (req, res) => {
 }
 
 
-export const deleteblockuser = (req, res) => {
+export const deleteblockuser = async (req, res) => {
+    try {
+        const { id } = req.query;
 
-    const { id } = req.query
+        // Find the block entry and populate the user field
+        const user = await Blockuser.findOne({ user: id }).populate('user');
 
-    Blockuser.findByIdAndDelete(id)
+        if (!user) {
+            return res.status(404).json({ msg: 'Blocked user not found' });
+        }
 
-        .then(() => {
+        // Delete the block entry
+        await Blockuser.findOneAndDelete({ user: id });
 
-            return res.json('user deleted successfully')
-        })
-        .catch((error) => {
-
-            console.log(error)
-
-        })
-
-
-
-}
-
-export const multipleblockuserdel = (req, res) => {
-
-    const ids = req.body
+        // Return the populated user
+        return res.json({
+            user,
+            msg: 'User unblocked successfully',
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: 'Server error' });
+    }
+};
 
 
-    Blockuser.deleteMany({ _id: { $in: ids } })
 
-        .then((result) => {
+export const multipleblockuserdel = async (req, res) => {
+    try {
+        const { ids } = req.body; // Assuming request body is { ids: [...] }
+        // console.log("userids:",ids)
+        // Find users before deleting
+        const deleteusers = await Blockuser.find({ user: { $in: ids } }).populate('user');
 
-            return res.json('selected user deleted')
-        })
-        .catch((error) => {
+        // Delete the users
+        await Blockuser.deleteMany({ user: { $in: ids } });
 
-            console.log(error)
-        })
+        return res.json({
+            users: deleteusers,
+            msg: 'Selected users deleted',
+        });
 
-}
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: 'Server error' });
+    }
+};
