@@ -13,6 +13,7 @@ import router from './routes/routes.js';
 import filerouter from './routes/file.js';
 import adminrouter from './routes/adminroute.js';
 import { Server } from 'socket.io';
+import { handleUserLeave } from './helperfunction/handleuserleave.js';
 
 const app = express();
 const server = createServer(app);
@@ -144,43 +145,17 @@ io.on('connection', (socket) => {
 
 
   //leave chatuser broadcost to all users
+socket.on('leavechat', async (data) => {
 
-  socket.on('leavechat', async (data) => {  //on leave chat
+  try {
+    await handleUserLeave(data.userid,io);
 
-    try {
-
-      const disconetuser = await removeuser(data.userid)
-
-      if (disconetuser) {
-
-        io.to(disconetuser.room._id.toString()).emit(
-          'message',
-          `${disconetuser.user.username} has left the chat`)
-
-        const findusers = await finduser(disconetuser.room._id)
-
-        if (findusers.length > 0) {
-
-          const chatuser = collectuser(findusers)
-
-          // Send users and room info
-          io.to(disconetuser.room._id.toString()).emit('roomUsers', {
-            room: findusers[0].room.name,
-            users: chatuser,
-          });
-
-        }
-      }
-
-
-      socket.broadcast.emit('leavechat', data)
-
-
-    } catch (error) {
-
-      console.log(error)
-    }
-  })
+    // Broadcast to others that this user left
+      io.emit('leavechat', data);
+  } catch (error) {
+    console.error(error);
+  }
+});
 
   //admin panel working
   //blockuser notify on real-time
@@ -272,13 +247,21 @@ io.on('connection', (socket) => {
 
 
   // Handle disconnection
-  socket.on('disconnect', async () => {
-
-    const userid = await socket.userId
-
-    console.log(userid)
-
-  });
+ socket.on('disconnect', async () => {
+  try {
+    const userid = socket.userId;
+    if (userid) {
+      
+      io.emit('leavechat', {userid:userid});
+      
+      await handleUserLeave(userid,io);
+       
+       
+    }
+  } catch (error) {
+    console.error('Error on disconnect:', error);
+  }
+});
 
 
 })

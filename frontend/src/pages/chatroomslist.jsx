@@ -64,8 +64,8 @@ const ChatroomList = () => {
 
     const handleRoomuser = (data) => {
 
-      setRoomUsers((prev) => {
-        const userExists = prev.some((user) => user.user === data.user); // ✅ Use `some` for boolean check
+   setRoomUsers((prev) => {
+        const userExists = prev.some((user) => user.user === data.user); 
 
         if (userExists) {
           return [...prev]; // Just return previous if user already exists
@@ -79,8 +79,10 @@ const ChatroomList = () => {
 
 
     const handleLeavechat = (data) => {
+     console.log(data)
 
       setRoomUsers((prev) => prev.filter((user) => user.user !== data.userid))
+    
     }
 
 
